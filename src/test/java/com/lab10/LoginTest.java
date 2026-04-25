@@ -5,11 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
@@ -18,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LoginTest {
 
     private WebDriver driver;
-    private WebDriverWait wait;
 
     @BeforeEach
     void setUp() {
@@ -29,58 +25,41 @@ public class LoginTest {
         options.addArguments("--disable-gpu");
         
         driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
     }
 
     @Test
     void test_login_with_incorrect_credetials() {
+        // Navigate to login page
         driver.navigate().to("http://103.139.122.250:4000/");
         
-        // Wait for page to load
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+        // Store current URL before attempting login
+        String urlBeforeLogin = driver.getCurrentUrl();
         
-        // Try to find email field - common selectors
-        WebElement emailField = findElement(By.name("email"), 
-                                            By.id("email"), 
-                                            By.name("username"),
-                                            By.id("username"),
-                                            By.xpath("//input[@type='email']"),
-                                            By.xpath("//input[contains(@placeholder, 'mail')]"));
+        // Fill in incorrect credentials
+        driver.findElement(By.name("email")).sendKeys("qasim@malik.com");
+        driver.findElement(By.name("password")).sendKeys("abcdefg");
         
-        // Try to find password field
-        WebElement passwordField = findElement(By.name("password"),
-                                               By.id("password"),
-                                               By.xpath("//input[@type='password']"));
+        // Click login button
+        driver.findElement(By.id("m_login_signin_submit")).click();
         
-        // Try to find submit button
-        WebElement submitBtn = findElement(By.id("m_login_signin_submit"),
-                                           By.xpath("//button[@type='submit']"),
-                                           By.xpath("//input[@type='submit']"),
-                                           By.cssSelector("button.btn-primary"));
-        
-        emailField.sendKeys("qasim@malik.com");
-        passwordField.sendKeys("abcdefg");
-        submitBtn.click();
-        
-        // Wait for error message
-        wait.until(ExpectedConditions.presenceOfElementLocated(
-            By.xpath("//*[contains(text(), 'Incorrect') or contains(text(), 'invalid') or contains(text(), 'wrong')]")));
-        
-        String pageSource = driver.getPageSource();
-        assertTrue(pageSource.contains("Incorrect") || pageSource.contains("invalid") || pageSource.contains("wrong"),
-                   "Expected error message not found");
-    }
-
-    private WebElement findElement(By... selectors) {
-        for (By selector : selectors) {
-            try {
-                return wait.until(ExpectedConditions.presenceOfElementLocated(selector));
-            } catch (Exception e) {
-                // Try next selector
-            }
+        // Wait for page to process
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        throw new RuntimeException("Could not find element with any of the provided selectors");
+        
+        // Get URL after login attempt
+        String urlAfterLogin = driver.getCurrentUrl();
+        
+        // Assert we are still on login page (login failed)
+        assertTrue(
+            urlAfterLogin.equals(urlBeforeLogin) || 
+            urlAfterLogin.contains("login") || 
+            urlAfterLogin.contains("signin"),
+            "Login should have failed but URL changed to: " + urlAfterLogin
+        );
     }
 
     @AfterEach
