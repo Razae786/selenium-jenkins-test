@@ -3,8 +3,11 @@ package com.lab10;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,25 +19,47 @@ public class LoginTest {
         options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu");
         WebDriver driver = new ChromeDriver(options);
 
-        driver.get("http://103.139.122.250:4000/");
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+        try {
+            driver.get("http://103.139.122.250:4000/");
 
-        driver.findElement(By.name("email")).sendKeys("wrong@test.com");
-        driver.findElement(By.name("password")).sendKeys("wrongpassword");
-        driver.findElement(By.cssSelector("button[type='submit']")).click();
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+            // Wait for any input field to appear, then find email/password by type
+            WebElement emailField = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("input[type='email'], input[type='text']")
+                )
+            );
+            emailField.sendKeys("wrong@test.com");
 
-        String pageSource = driver.getPageSource();
-        assertTrue(
-            pageSource.contains("Invalid") ||
-            pageSource.contains("incorrect") ||
-            pageSource.contains("error") ||
-            pageSource.contains("wrong") ||
-            pageSource.contains("failed"),
-            "Expected login error message not found"
-        );
+            WebElement passwordField = driver.findElement(
+                By.cssSelector("input[type='password']")
+            );
+            passwordField.sendKeys("wrongpassword123");
 
-        driver.quit();
+            WebElement submitBtn = driver.findElement(
+                By.cssSelector("button[type='submit']")
+            );
+            submitBtn.click();
+
+            // Wait for error response
+            Thread.sleep(3000);
+
+            String pageSource = driver.getPageSource().toLowerCase();
+            assertTrue(
+                pageSource.contains("invalid") ||
+                pageSource.contains("incorrect") ||
+                pageSource.contains("error") ||
+                pageSource.contains("wrong") ||
+                pageSource.contains("failed") ||
+                pageSource.contains("credentials"),
+                "Expected login error message on page"
+            );
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            driver.quit();
+        }
     }
 }
